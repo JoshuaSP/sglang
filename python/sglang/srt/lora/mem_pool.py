@@ -8,6 +8,7 @@ from sglang.srt.lora.eviction_policy import get_eviction_policy
 from sglang.srt.lora.layers import BaseLayerWithLoRA
 from sglang.srt.lora.lora import LoRAAdapter
 from sglang.srt.lora.lora_config import LoRAConfig
+from sglang.srt.lora.utils import get_text_config
 from sglang.srt.lora.lora_registry import LoRARef
 from sglang.srt.lora.utils import (
     EMBEDDING_NAMES,
@@ -60,15 +61,8 @@ class LoRAMemoryPool:
         lora_added_tokens_size: int,
     ):
         self.base_hf_config: AutoConfig = base_hf_config
-        # Handle VLM configs where num_hidden_layers is on text_config
-        if hasattr(base_hf_config, "num_hidden_layers"):
-            self.num_layer: int = base_hf_config.num_hidden_layers
-        elif hasattr(base_hf_config, "text_config"):
-            self.num_layer: int = base_hf_config.text_config.num_hidden_layers
-        else:
-            raise AttributeError(
-                f"{type(base_hf_config).__name__} has no 'num_hidden_layers'"
-            )
+        tc = get_text_config(base_hf_config)
+        self.num_layer: int = tc.num_hidden_layers
         self.max_loras_per_batch: int = max_loras_per_batch
         self.dtype: torch.dtype = dtype
         self.tp_size: int = tp_size
@@ -95,7 +89,7 @@ class LoRAMemoryPool:
         self.lm_head_B_buffer: Dict[str, torch.Tensor] = {}
         self.new_embeddings_buffer: Dict[str, torch.Tensor] = {}
 
-        self.embedding_dim: int = self.base_hf_config.hidden_size
+        self.embedding_dim: int = tc.hidden_size
 
         # Lora uid -> buffer idx in memory pool
         self.uid_to_buffer_id: Dict[Optional[str], int] = {}

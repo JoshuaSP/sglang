@@ -559,24 +559,13 @@ class LoRAManager:
         replace_submodule(self.base_model, module_name, lora_module)
         return lora_module
 
-    def _get_num_hidden_layers(self) -> int:
-        """Get num_hidden_layers, handling VLM configs where it's on text_config."""
-        config = self.base_hf_config
-        if hasattr(config, "num_hidden_layers"):
-            return config.num_hidden_layers
-        # VLM configs (e.g. Qwen3_5Config) nest text model config under text_config
-        if hasattr(config, "text_config") and hasattr(config.text_config, "num_hidden_layers"):
-            return config.text_config.num_hidden_layers
-        raise AttributeError(
-            f"{type(config).__name__} has no 'num_hidden_layers' attribute "
-            f"(checked top-level and text_config). Available attributes: "
-            f"{[k for k in dir(config) if not k.startswith('_')]}"
-        )
-
     def init_lora_modules(self):
+        from sglang.srt.lora.utils import get_text_config
+
+        tc = get_text_config(self.base_hf_config)
         # Look-up table that essentially maps (layer_index, module_name) to the corresponding LoRA module.
         self.lora_modules: List[Dict[str, BaseLayerWithLoRA]] = [
-            {} for _ in range(self._get_num_hidden_layers())
+            {} for _ in range(tc.num_hidden_layers)
         ]
 
         self.embed_tokens_module: Optional[BaseLayerWithLoRA] = None
