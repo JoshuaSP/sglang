@@ -64,10 +64,16 @@ class LoRAAdapter(nn.Module):
         self.lora_backend: BaseLoRABackend = lora_backend
         self.scaling: float = self.config.lora_alpha / self.config.r
 
+        # Handle VLM configs where num_hidden_layers is on text_config
+        num_layers = (
+            base_hf_config.num_hidden_layers
+            if hasattr(base_hf_config, "num_hidden_layers")
+            else base_hf_config.text_config.num_hidden_layers
+        )
         self.layers: List[LoRALayer] = nn.ModuleList(
             [
                 LoRALayer(config, base_hf_config)
-                for _ in range(base_hf_config.num_hidden_layers)
+                for _ in range(num_layers)
             ]
         )
 

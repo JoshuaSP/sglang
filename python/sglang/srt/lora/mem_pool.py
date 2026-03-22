@@ -60,7 +60,15 @@ class LoRAMemoryPool:
         lora_added_tokens_size: int,
     ):
         self.base_hf_config: AutoConfig = base_hf_config
-        self.num_layer: int = base_hf_config.num_hidden_layers
+        # Handle VLM configs where num_hidden_layers is on text_config
+        if hasattr(base_hf_config, "num_hidden_layers"):
+            self.num_layer: int = base_hf_config.num_hidden_layers
+        elif hasattr(base_hf_config, "text_config"):
+            self.num_layer: int = base_hf_config.text_config.num_hidden_layers
+        else:
+            raise AttributeError(
+                f"{type(base_hf_config).__name__} has no 'num_hidden_layers'"
+            )
         self.max_loras_per_batch: int = max_loras_per_batch
         self.dtype: torch.dtype = dtype
         self.tp_size: int = tp_size
